@@ -23,7 +23,7 @@ class IncidentBase(BaseModel):
 class IncidentCreate(BaseModel):
     type: str = Field(..., description="Type of incident (e.g., 'Armed Robbery')")
     priority: int = Field(..., ge=1, le=4, description="Priority level 1-4")
-    location: str = Field(..., description="Address or location description")
+    address: str = Field(..., description="Address or location description")
     latitude: Optional[float] = Field(None, description="Latitude coordinate")
     longitude: Optional[float] = Field(None, description="Longitude coordinate")
     description: Optional[str] = Field(None, description="Detailed description of the incident")
@@ -31,7 +31,7 @@ class IncidentCreate(BaseModel):
 class IncidentUpdate(BaseModel):
     type: Optional[str] = None
     priority: Optional[int] = Field(None, ge=1, le=4)
-    location: Optional[str] = None
+    address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     description: Optional[str] = None
@@ -43,7 +43,7 @@ class IncidentResponse(BaseModel):
     id: int
     type: str
     priority: int
-    location: str
+    address: str
     latitude: Optional[float]
     longitude: Optional[float]
     description: Optional[str]
@@ -60,7 +60,7 @@ class IncidentList(BaseModel):
     id: int
     type: str
     priority: int
-    location: str
+    address: str
     status: IncidentStatus
     created_at: datetime
     updated_at: datetime

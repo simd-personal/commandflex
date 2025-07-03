@@ -15,7 +15,7 @@ from backend.app.schemas.unit import UnitAssignment
 from backend.app.schemas.log import LogCreate, TimelineEntry
 from backend.app.services.logging import create_log
 
-router = APIRouter(prefix="/incidents", tags=["incidents"])
+router = APIRouter(tags=["incidents"])
 
 def generate_incident_number() -> str:
     """Generate a unique incident number"""
@@ -33,7 +33,7 @@ async def create_incident(
     db_incident = Incident(
         type=incident.type,
         priority=incident.priority,
-        location=incident.location,
+        address=incident.address,
         latitude=incident.latitude,
         longitude=incident.longitude,
         description=incident.description,
@@ -47,7 +47,7 @@ async def create_incident(
     log = Log(
         incident_id=db_incident.id,
         type=LogType.status,
-        message=f"Incident created: {incident.type} at {incident.location}"
+        message=f"Incident created: {incident.type} at {incident.address}"
     )
     db.add(log)
     db.commit()
@@ -210,7 +210,7 @@ async def get_incident_timeline(
         unit_name = None
         if log.unit_id:
             unit = db.query(Unit).filter(Unit.id == log.unit_id).first()
-            unit_name = unit.name if unit else None
+            unit_name = unit.unit_number if unit else None
         
         timeline.append(TimelineEntry(
             id=log.id,
