@@ -5,19 +5,24 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import LoginForm from '@/components/auth/LoginForm'
 import Dashboard from '@/components/dashboard/Dashboard'
+import { authAPI } from '@/lib/api'
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, setUser, logout } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is already authenticated
     const token = localStorage.getItem('token')
-    if (token) {
-      // Validate token and set user
-      // This would typically involve an API call to verify the token
-      setIsLoading(false)
+    if (token && !user) {
+      authAPI.me()
+        .then((userData) => {
+          setUser(userData)
+        })
+        .catch(() => {
+          logout()
+        })
+        .finally(() => setIsLoading(false))
     } else {
       setIsLoading(false)
     }

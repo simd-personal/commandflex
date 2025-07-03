@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
-from app.core.database import get_db
-from app.core.auth import get_current_user, require_role
-from app.models.user import User, UserRole
-from app.models.unit import Unit, UnitStatus, UnitType
-from app.models.log import Log, LogType
-from app.schemas.unit import UnitCreate, UnitUpdate, UnitResponse, UnitList, UnitStatusUpdate
-from app.schemas.log import LogCreate
-from app.services.logging import create_log
+from backend.app.core.database import get_db
+from backend.app.core.auth import get_current_user, require_role
+from backend.app.models.user import User, UserRole
+from backend.app.models.unit import Unit, UnitStatus, UnitType
+from backend.app.models.log import Log, LogType
+from backend.app.schemas.unit import UnitCreate, UnitUpdate, UnitResponse, UnitList, UnitStatusUpdate
+from backend.app.schemas.log import LogCreate
+from backend.app.services.logging import create_log
 
 router = APIRouter(prefix="/units", tags=["units"])
 

@@ -11,7 +11,7 @@ from backend.app.models.user import User, UserRole
 from backend.app.schemas.user import UserCreate, UserResponse, UserLogin, Token
 from backend.app.core.auth import get_current_user, require_role
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(tags=["authentication"])
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
