@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 import uuid
 
 from app.core.database import get_db
-from app.core.auth import get_current_active_user
-from app.models.user import User
+from app.core.auth import get_current_active_user, require_role
+from app.models.user import User, UserRole
 from app.models.incident import Incident, IncidentStatus, IncidentType, IncidentPriority
-from app.schemas.incident import IncidentCreate, IncidentUpdate, IncidentResponse, IncidentList
+from app.models.unit import Unit, UnitStatus
+from app.models.log import Log, LogType
+from app.schemas.incident import IncidentCreate, IncidentUpdate, IncidentResponse, IncidentList, IncidentResolve
+from app.schemas.unit import UnitAssignment
+from app.schemas.log import LogCreate, TimelineEntry
 from app.services.logging import create_log
 
-router = APIRouter()
+router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 def generate_incident_number() -> str:
     """Generate a unique incident number"""
@@ -22,122 +26,224 @@ def generate_incident_number() -> str:
 @router.post("/", response_model=IncidentResponse)
 async def create_incident(
     incident: IncidentCreate,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.dispatcher]))
 ):
-    """Create a new incident"""
-    incident_number = generate_incident_number()
-    
+    """Create a new incident (Dispatcher only)"""
     db_incident = Incident(
-        incident_number=incident_number,
         type=incident.type,
         priority=incident.priority,
-        address=incident.address,
-        description=incident.description,
-        caller_name=incident.caller_name,
-        caller_phone=incident.caller_phone,
+        location=incident.location,
         latitude=incident.latitude,
         longitude=incident.longitude,
-        created_by=current_user.id
+        description=incident.description,
+        status=IncidentStatus.new
     )
-    
     db.add(db_incident)
     db.commit()
     db.refresh(db_incident)
     
-    # Log the incident creation
-    await create_log(
-        db=db,
-        log_type="incident_created",
-        message=f"Incident {incident_number} created by {current_user.username}",
-        user_id=current_user.id,
+    # Create initial log entry
+    log = Log(
         incident_id=db_incident.id,
-        details={
-            "incident_number": incident_number,
-            "type": incident.type.value,
-            "priority": incident.priority.value,
-            "address": incident.address
-        }
+        type=LogType.status,
+        message=f"Incident created: {incident.type} at {incident.location}"
     )
+    db.add(log)
+    db.commit()
     
-    return IncidentResponse.from_orm(db_incident)
+    return db_incident
 
-@router.get("/", response_model=IncidentList)
-async def get_incidents(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+@router.get("/", response_model=List[IncidentList])
+async def list_incidents(
     status: Optional[IncidentStatus] = None,
-    type: Optional[IncidentType] = None,
-    priority: Optional[IncidentPriority] = None,
-    db: Session = Depends(get_db)
+    priority: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Get list of incidents with optional filtering"""
+    """List incidents with optional filtering"""
     query = db.query(Incident)
     
     if status:
         query = query.filter(Incident.status == status)
-    if type:
-        query = query.filter(Incident.type == type)
     if priority:
         query = query.filter(Incident.priority == priority)
     
-    total = query.count()
-    incidents = query.offset(skip).limit(limit).all()
-    
-    return IncidentList(
-        incidents=[IncidentResponse.from_orm(incident) for incident in incidents],
-        total=total,
-        page=skip // limit + 1,
-        size=limit
-    )
+    incidents = query.order_by(Incident.created_at.desc()).all()
+    return incidents
 
 @router.get("/{incident_id}", response_model=IncidentResponse)
 async def get_incident(
     incident_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Get a specific incident by ID"""
+    """Get incident details"""
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
-    
-    return IncidentResponse.from_orm(incident)
+    return incident
 
 @router.patch("/{incident_id}", response_model=IncidentResponse)
 async def update_incident(
     incident_id: int,
     incident_update: IncidentUpdate,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.dispatcher]))
 ):
-    """Update an incident"""
+    """Update incident details (Dispatcher only)"""
     db_incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not db_incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     
-    # Update fields
     update_data = incident_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_incident, field, value)
     
-    # Set resolved timestamp if status is resolved
-    if incident_update.status == IncidentStatus.RESOLVED:
-        db_incident.resolved_at = datetime.utcnow()
-    
+    db_incident.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(db_incident)
     
-    # Log the update
-    await create_log(
-        db=db,
-        log_type="incident_updated",
-        message=f"Incident {db_incident.incident_number} updated by {current_user.username}",
-        user_id=current_user.id,
-        incident_id=db_incident.id,
-        details=update_data
-    )
+    return db_incident
+
+@router.post("/{incident_id}/assign", response_model=IncidentResponse)
+async def assign_unit(
+    incident_id: int,
+    assignment: UnitAssignment,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.dispatcher]))
+):
+    """Assign a unit to an incident (Dispatcher only)"""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
     
-    return IncidentResponse.from_orm(db_incident)
+    unit = db.query(Unit).filter(Unit.id == assignment.incident_id).first()
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    
+    if unit.status != UnitStatus.available:
+        raise HTTPException(status_code=400, detail="Unit is not available")
+    
+    # Update unit assignment
+    unit.incident_id = incident_id
+    unit.status = UnitStatus.en_route
+    unit.updated_at = datetime.utcnow()
+    
+    # Update incident status
+    incident.status = IncidentStatus.dispatched
+    incident.updated_at = datetime.utcnow()
+    
+    # Create log entries
+    dispatch_log = Log(
+        incident_id=incident_id,
+        unit_id=unit.id,
+        type=LogType.dispatch,
+        message=f"Unit {unit.name} dispatched to incident"
+    )
+    db.add(dispatch_log)
+    
+    if assignment.notes:
+        note_log = Log(
+            incident_id=incident_id,
+            unit_id=unit.id,
+            type=LogType.note,
+            message=f"Dispatch notes: {assignment.notes}"
+        )
+        db.add(note_log)
+    
+    db.commit()
+    db.refresh(incident)
+    
+    return incident
+
+@router.post("/{incident_id}/resolve", response_model=IncidentResponse)
+async def resolve_incident(
+    incident_id: int,
+    resolution: IncidentResolve,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.dispatcher]))
+):
+    """Mark incident as resolved (Dispatcher only)"""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    
+    incident.status = IncidentStatus.resolved
+    incident.resolved_summary = resolution.summary
+    incident.updated_at = datetime.utcnow()
+    
+    # Free up assigned units
+    for unit in incident.units:
+        unit.incident_id = None
+        unit.status = UnitStatus.available
+        unit.updated_at = datetime.utcnow()
+    
+    # Create resolution log
+    resolution_log = Log(
+        incident_id=incident_id,
+        type=LogType.resolution,
+        message=f"Incident resolved: {resolution.summary}"
+    )
+    db.add(resolution_log)
+    
+    db.commit()
+    db.refresh(incident)
+    
+    return incident
+
+@router.get("/{incident_id}/timeline", response_model=List[TimelineEntry])
+async def get_incident_timeline(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get incident timeline/logs"""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    
+    logs = db.query(Log).filter(Log.incident_id == incident_id).order_by(Log.timestamp).all()
+    
+    timeline = []
+    for log in logs:
+        unit_name = None
+        if log.unit_id:
+            unit = db.query(Unit).filter(Unit.id == log.unit_id).first()
+            unit_name = unit.name if unit else None
+        
+        timeline.append(TimelineEntry(
+            id=log.id,
+            type=log.type,
+            message=log.message,
+            timestamp=log.timestamp,
+            unit_name=unit_name
+        ))
+    
+    return timeline
+
+@router.post("/{incident_id}/notes")
+async def add_incident_note(
+    incident_id: int,
+    note: LogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Add a note to an incident"""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    
+    log = Log(
+        incident_id=incident_id,
+        unit_id=note.unit_id,
+        type=LogType.note,
+        message=note.message
+    )
+    db.add(log)
+    db.commit()
+    
+    return {"message": "Note added successfully"}
 
 @router.delete("/{incident_id}")
 async def delete_incident(

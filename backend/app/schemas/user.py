@@ -1,38 +1,38 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
-from app.models.user import UserRole
+from enum import Enum
+from backend.app.models.user import UserRole
 
-class UserBase(BaseModel):
-    username: str
-    email: EmailStr
-    full_name: str
-    role: UserRole = UserRole.DISPATCHER
+class UserRole(str, Enum):
+    dispatcher = "dispatcher"
+    responder = "responder"
 
-class UserCreate(UserBase):
-    password: str
+class UserCreate(BaseModel):
+    username: str = Field(..., description="Username for login")
+    password: str = Field(..., description="Password")
+    role: UserRole = Field(..., description="User role")
 
-class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    role: Optional[UserRole] = None
-    is_active: Optional[bool] = None
+class UserLogin(BaseModel):
+    username: str = Field(..., description="Username")
+    password: str = Field(..., description="Password")
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     id: int
-    is_active: bool
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    
+    username: str
+    role: UserRole
+
     class Config:
         from_attributes = True
 
-class UserLogin(BaseModel):
-    username: str
-    password: str
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    role: Optional[UserRole] = None
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user: UserResponse 
+    user: UserResponse
+
+class TokenData(BaseModel):
+    username: Optional[str] = None 

@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, Enum, DateTime, Text, Float, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.core.database import Base
+from backend.app.core.database import Base
 import enum
+from datetime import datetime
 
 class IncidentType(str, enum.Enum):
     FIRE = "fire"
@@ -18,12 +19,10 @@ class IncidentPriority(str, enum.Enum):
     LOW = "4"
 
 class IncidentStatus(str, enum.Enum):
-    NEW = "new"
-    DISPATCHED = "dispatched"
-    EN_ROUTE = "en_route"
-    ON_SCENE = "on_scene"
-    RESOLVED = "resolved"
-    CANCELLED = "cancelled"
+    new = "new"
+    dispatched = "dispatched"
+    on_scene = "on_scene"
+    resolved = "resolved"
 
 class Incident(Base):
     __tablename__ = "incidents"
@@ -32,7 +31,7 @@ class Incident(Base):
     incident_number = Column(String, unique=True, index=True, nullable=False)
     type = Column(Enum(IncidentType), nullable=False)
     priority = Column(Enum(IncidentPriority), nullable=False)
-    status = Column(Enum(IncidentStatus), default=IncidentStatus.NEW)
+    status = Column(Enum(IncidentStatus), default=IncidentStatus.new)
     
     # Location
     address = Column(String, nullable=False)
@@ -49,6 +48,10 @@ class Incident(Base):
     assigned_units = relationship("Dispatch", back_populates="incident")
     
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    resolved_at = Column(DateTime(timezone=True), nullable=True) 
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(Text, nullable=True)
+    timeline = relationship("Log", back_populates="incident")
+    units = relationship("Unit", back_populates="incident")
+    resolved_summary = Column(Text, nullable=True) 

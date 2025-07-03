@@ -4,53 +4,103 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.core.auth import get_current_active_user
-from app.models.user import User
+from app.core.auth import get_current_user, require_role
+from app.models.user import User, UserRole
 from app.models.log import Log, LogType
-from app.schemas.log import LogResponse, LogList
+from app.models.incident import Incident, IncidentStatus
+from app.models.unit import Unit, UnitStatus
+from app.schemas.log import LogResponse, TimelineEntry
 
-router = APIRouter()
+router = APIRouter(prefix="/logs", tags=["logs"])
 
-@router.get("/", response_model=LogList)
+@router.get("/", response_model=List[LogResponse])
 async def get_logs(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    log_type: Optional[LogType] = None,
-    user_id: Optional[int] = None,
     incident_id: Optional[int] = None,
     unit_id: Optional[int] = None,
+    log_type: Optional[LogType] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get activity logs with optional filtering"""
+    """Get logs with optional filtering"""
     query = db.query(Log)
     
-    if log_type:
-        query = query.filter(Log.type == log_type)
-    if user_id:
-        query = query.filter(Log.user_id == user_id)
     if incident_id:
         query = query.filter(Log.incident_id == incident_id)
     if unit_id:
         query = query.filter(Log.unit_id == unit_id)
+    if log_type:
+        query = query.filter(Log.type == log_type)
     if start_date:
-        query = query.filter(Log.created_at >= start_date)
+        query = query.filter(Log.timestamp >= start_date)
     if end_date:
-        query = query.filter(Log.created_at <= end_date)
+        query = query.filter(Log.timestamp <= end_date)
     
-    # Order by most recent first
-    query = query.order_by(Log.created_at.desc())
+    logs = query.order_by(Log.timestamp.desc()).all()
+    return logs
+
+@router.get("/reports/incidents")
+async def get_incident_report(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    priority: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.dispatcher]))
+):
+    """Get incident report statistics (Dispatcher only)"""
+    query = db.query(Incident)
     
-    total = query.count()
-    logs = query.offset(skip).limit(limit).all()
+    if start_date:
+        query = query.filter(Incident.created_at >= start_date)
+    if end_date:
+        query = query.filter(Incident.created_at <= end_date)
+    if priority:
+        query = query.filter(Incident.priority == priority)
     
-    return LogList(
-        logs=[LogResponse.from_orm(log) for log in logs],
-        total=total,
-        page=skip // limit + 1,
-        size=limit
-    )
+    incidents = query.all()
+    
+    # Calculate statistics
+    total_incidents = len(incidents)
+    resolved_incidents = len([i for i in incidents if i.status == IncidentStatus.resolved])
+    avg_response_time = None  # TODO: Calculate from logs
+    
+    return {
+        "total_incidents": total_incidents,
+        "resolved_incidents": resolved_incidents,
+        "resolution_rate": (resolved_incidents / total_incidents * 100) if total_incidents > 0 else 0,
+        "avg_response_time": avg_response_time
+    }
+
+@router.get("/reports/units")
+async def get_unit_report(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.dispatcher]))
+):
+    """Get unit performance report (Dispatcher only)"""
+    query = db.query(Unit)
+    units = query.all()
+    
+    unit_stats = []
+    for unit in units:
+        # Count incidents assigned to this unit
+        incident_count = len(unit.incident.units) if unit.incident else 0
+        
+        unit_stats.append({
+            "unit_id": unit.id,
+            "unit_name": unit.name,
+            "incident_count": incident_count,
+            "current_status": unit.status,
+            "last_updated": unit.updated_at
+        })
+    
+    return {
+        "units": unit_stats,
+        "total_units": len(units),
+        "available_units": len([u for u in units if u.status == UnitStatus.available])
+    }
 
 @router.get("/incident/{incident_id}", response_model=List[LogResponse])
 async def get_incident_logs(

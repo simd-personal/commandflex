@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, Enum, DateTime, Float, Boolean, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.core.database import Base
+from backend.app.core.database import Base
 import enum
+from datetime import datetime
 
 class UnitType(str, enum.Enum):
     POLICE = "police"
@@ -11,11 +12,10 @@ class UnitType(str, enum.Enum):
     SPECIAL = "special"
 
 class UnitStatus(str, enum.Enum):
-    AVAILABLE = "available"
-    EN_ROUTE = "en_route"
-    ON_SCENE = "on_scene"
-    CLEARED = "cleared"
-    OUT_OF_SERVICE = "out_of_service"
+    available = "available"
+    en_route = "en_route"
+    on_scene = "on_scene"
+    unavailable = "unavailable"
 
 class Unit(Base):
     __tablename__ = "units"
@@ -23,7 +23,7 @@ class Unit(Base):
     id = Column(Integer, primary_key=True, index=True)
     unit_number = Column(String, unique=True, index=True, nullable=False)
     type = Column(Enum(UnitType), nullable=False)
-    status = Column(Enum(UnitStatus), default=UnitStatus.AVAILABLE)
+    status = Column(Enum(UnitStatus), default=UnitStatus.available)
     
     # Location tracking
     current_latitude = Column(Float, nullable=True)
@@ -44,4 +44,9 @@ class Unit(Base):
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    incident = relationship("Incident", back_populates="units")
+    responder = relationship("User", back_populates="units")
+    logs = relationship("Log", back_populates="unit") 
