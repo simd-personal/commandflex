@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.app.models.log import Log, LogType
+from app.models.log import Log, LogType
 from typing import Optional, Dict, Any
 
 async def create_log(

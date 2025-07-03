@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.core.database import engine, Base
-from backend.app.api import api_router
+from app.core.database import engine, Base
+from app.api import api_router
 import uvicorn
 
 # Create database tables

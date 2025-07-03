@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
-from backend.app.models.incident import IncidentType, IncidentPriority, IncidentStatus
+from app.models.incident import IncidentType, IncidentPriority, IncidentStatus
 
 class IncidentStatus(str, Enum):
     new = "new"

@@ -145,4 +145,96 @@ a {
 
 .emergency-pulse {
   animation: emergency-pulse 1s ease-in-out infinite;
+}
+
+/* Map styles */
+.leaflet-container {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--secondary-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+}
+
+.leaflet-popup-tip {
+  background: var(--secondary-bg);
+  border: 1px solid var(--accent-color);
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  min-width: 200px;
+}
+
+.unit-popup h3,
+.incident-popup h3,
+.zone-popup h3 {
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.unit-popup p,
+.incident-popup p,
+.zone-popup p {
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.leaflet-control-layers {
+  background: var(--secondary-bg);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.leaflet-control-layers label {
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: var(--secondary-bg);
+  color: var(--text-primary);
+  border: none;
+  border-bottom: 1px solid var(--accent-color);
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--accent-color);
+  color: var(--primary-bg);
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none;
+}
+
+/* Custom unit and incident icons */
+.custom-unit-icon,
+.custom-incident-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Map layer controls */
+.leaflet-control-layers-toggle {
+  background: var(--secondary-bg);
+  border: 1px solid var(--accent-color);
+  color: var(--text-primary);
+}
+
+.leaflet-control-layers-expanded {
+  background: var(--secondary-bg);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 200px;
 } 

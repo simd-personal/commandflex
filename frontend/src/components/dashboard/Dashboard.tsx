@@ -6,10 +6,12 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import IncidentsView from '../incidents/IncidentsView'
 import UnitsView from '../units/UnitsView'
-import MapView from '../map/MapView'
+import dynamic from 'next/dynamic'
 import LogsView from '../logs/LogsView'
 
 type ViewType = 'incidents' | 'units' | 'map' | 'logs'
+
+const MapView = dynamic(() => import('../map/MapView'), { ssr: false })
 
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState<ViewType>('incidents')

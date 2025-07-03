@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from backend.app.models.dispatch import DispatchStatus
+from app.models.dispatch import DispatchStatus
 
 class DispatchBase(BaseModel):
     incident_id: int

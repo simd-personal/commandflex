@@ -1,8 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
-from backend.app.websocket.manager import manager
-from backend.app.core.auth import verify_token
-from backend.app.models.user import User
-from backend.app.core.database import SessionLocal
+from app.websocket.manager import manager
+from app.core.auth import verify_token
+from app.models.user import User
+from app.core.database import SessionLocal
 import json
 
 router = APIRouter()

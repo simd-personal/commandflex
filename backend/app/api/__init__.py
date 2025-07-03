@@ -1,6 +1,6 @@
 # API package 
 from fastapi import APIRouter
-from backend.app.api import auth, incidents, units, logs
+from app.api import auth, incidents, units, logs
 
 api_router = APIRouter()
 

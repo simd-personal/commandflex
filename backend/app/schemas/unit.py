@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
-from backend.app.models.unit import UnitType, UnitStatus
+from app.models.unit import UnitType, UnitStatus
 
 class UnitStatus(str, Enum):
     available = "available"

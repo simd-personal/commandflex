@@ -5,11 +5,11 @@ from typing import List
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from backend.app.core.database import get_db
-from backend.app.core.config import settings
-from backend.app.models.user import User, UserRole
-from backend.app.schemas.user import UserCreate, UserResponse, UserLogin, Token
-from backend.app.core.auth import get_current_user, require_role
+from app.core.database import get_db
+from app.core.config import settings
+from app.models.user import User, UserRole
+from app.schemas.user import UserCreate, UserResponse, UserLogin, Token
+from app.core.auth import get_current_user, require_role
 
 router = APIRouter(tags=["authentication"])
 

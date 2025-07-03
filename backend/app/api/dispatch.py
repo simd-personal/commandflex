@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
-from backend.app.core.database import get_db
-from backend.app.core.auth import get_current_active_user
-from backend.app.models.user import User
-from backend.app.models.incident import Incident, IncidentStatus
-from backend.app.models.unit import Unit, UnitStatus
-from backend.app.models.dispatch import Dispatch, DispatchStatus
-from backend.app.schemas.dispatch import DispatchCreate, DispatchUpdate, DispatchResponse
-from backend.app.services.logging import create_log
+from app.core.database import get_db
+from app.core.auth import get_current_active_user
+from app.models.user import User
+from app.models.incident import Incident, IncidentStatus
+from app.models.unit import Unit, UnitStatus
+from app.models.dispatch import Dispatch, DispatchStatus
+from app.schemas.dispatch import DispatchCreate, DispatchUpdate, DispatchResponse
+from app.services.logging import create_log
 
 router = APIRouter()
 

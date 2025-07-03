@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
-from backend.app.models.log import LogType
+from app.models.log import LogType
 
 class LogType(str, Enum):
     status = "status"

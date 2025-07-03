@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 from enum import Enum
-from backend.app.models.user import UserRole
+from app.models.user import UserRole
 
 class UserRole(str, Enum):
     dispatcher = "dispatcher"

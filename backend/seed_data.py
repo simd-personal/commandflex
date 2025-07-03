@@ -5,15 +5,15 @@ Seed script to populate the database with initial data for CommandFlex
 
 import asyncio
 from sqlalchemy.orm import Session
-from backend.app.core.database import SessionLocal, engine
-from backend.app.models import Base, User, Incident, Unit
-from backend.app.models.user import UserRole
-from backend.app.models.incident import IncidentType, IncidentPriority, IncidentStatus
-from backend.app.models.unit import UnitType, UnitStatus
-from backend.app.core.auth import get_password_hash
+from app.core.database import SessionLocal, engine
+from app.models import Base, User, Incident, Unit
+from app.models.user import UserRole
+from app.models.incident import IncidentType, IncidentPriority, IncidentStatus
+from app.models.unit import UnitType, UnitStatus
+from app.core.auth import get_password_hash
 from datetime import datetime, timedelta
 import random
-from backend.app.models.log import Log, LogType
+from app.models.log import Log, LogType
 
 def create_users(db: Session):
     """Create initial users"""
